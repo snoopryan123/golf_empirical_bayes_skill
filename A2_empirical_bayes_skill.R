@@ -281,7 +281,7 @@ plot_BH =
   geom_point(aes(y = pval), color = "black", size = 1, shape=23) +
   geom_line(aes(y = bh_threshold, color=factor(alpha)), linewidth = 0.75) +
   labs(
-    title = paste0("Benjamini-Hochberg FDR Control for ",firstup(stroke_category)),
+    title = paste0("Benjamini-Hochberg FDR Control"),
     x = "P-value Rank",
     y = "P-value",
   ) +
