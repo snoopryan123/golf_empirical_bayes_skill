@@ -196,7 +196,7 @@ for (stroke_category in unique(df0$stroke_grp)) {
     arrange(p_val) 
   df.EB.results$stroke_category = stroke_category
   df.EB.results
-  write_csv(df.EB.results, paste0("results_",stroke_category,"_EB_estimates.csv"))
+  write_csv(df.EB.results, paste0("results_EB_estimates_",stroke_category,".csv"))
   df.EB.results.full = bind_rows(df.EB.results.full, df.EB.results)
   
   ### Multiple Testing: Benjamini-Hochberg (BH) to control the False Discovery Rate (FDR)
