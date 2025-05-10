@@ -256,6 +256,7 @@ plot_EB_estimates =
   geom_vline(xintercept=0,linetype="dashed",color="gray50",linewidth=1.5) +
   xlab(TeX("Empirical Bayes estimate $\\hat{\\mu}^{(EB)}_i$")) +
   # scale_x_continuous(breaks=seq(-1,1,by=0.05)) +
+  ylab("Count") +
   labs(title = paste0("Distribution of Estimated Golfer Skills"))
 # plot_EB_estimates
 ggsave(paste0("results_plot_EB.png"), plot_EB_estimates, width=8, height=3)
@@ -285,6 +286,7 @@ plot_BH =
     x = "P-value Rank",
     y = "P-value",
   ) +
+  ylim(c(0, max(alphas))) +
   scale_color_manual(name = "\U1D6FC", values=brewer.pal(9, "PuRd")[4:8])
 # plot_BH
 ggsave(paste0("results_plot_BH.png"), plot_BH, width=8, height=3)
