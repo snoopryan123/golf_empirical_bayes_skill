@@ -275,12 +275,37 @@ plot_EB_shrinkage =
 ggsave(paste0("results_plot_EB_shrinkage.png"), plot_EB_shrinkage, width=10, height=4)
 
 ### plot Benjamini Hochberg
-plot_BH = 
+max_rank = (df_pvals_BH.full %>% group_by(stroke_category) %>% filter(pval <= max(alphas)) %>% reframe(m=max(rank)) %>% reframe(m=max(m)))$m
+max_rank
+plot_BH0 = 
   df_pvals_BH.full %>%
   ggplot(aes(x = rank)) +
   facet_wrap(~ stroke_category) + 
-  geom_point(aes(y = pval), color = "black", size = 1, shape=23) +
-  geom_line(aes(y = bh_threshold, color=factor(alpha)), linewidth = 0.75) +
+  geom_point(aes(y = pval), color = "black", size = 0.5, shape=21) +
+  geom_line(aes(y = bh_threshold, color=factor(alpha)), linewidth = 0.5) +
+  labs(
+    title = paste0("Benjamini-Hochberg FDR Control"),
+    x = "P-value Rank",
+    y = "P-value",
+  ) +
+  ylim(c(0, max(alphas))) +
+  xlim(c(0,max_rank)) +
+  scale_color_manual(name = "\U1D6FC", values=brewer.pal(9, "PuRd")[4:8])
+# plot_BH0
+ggsave(paste0("results_plot_BH0.png"), plot_BH0, width=8, height=3)
+
+### plot Benjamini Hochberg
+max_ranks = df_pvals_BH.full %>% filter(alpha == max(alphas), rank > 25) %>% group_by(stroke_category) %>% mutate(diff = abs(pval - bh_threshold)) %>% arrange(diff) %>% slice_head() %>% ungroup() %>% select(stroke_category, rank) %>% rename(max_rank = rank)
+max_ranks$max_rank = max_ranks$max_rank + 5
+max_ranks
+plot_BH = 
+  df_pvals_BH.full %>%
+  left_join(max_ranks) %>%
+  filter(pval <= max(alphas), rank <= max_rank) %>%
+  ggplot(aes(x = rank)) +
+  facet_wrap(~ stroke_category, scales="free_x") + 
+  geom_point(aes(y = pval), color = "black", size = 0.5, shape=21) +
+  geom_line(aes(y = bh_threshold, color=factor(alpha)), linewidth = 0.5) +
   labs(
     title = paste0("Benjamini-Hochberg FDR Control"),
     x = "P-value Rank",
@@ -290,4 +315,5 @@ plot_BH =
   scale_color_manual(name = "\U1D6FC", values=brewer.pal(9, "PuRd")[4:8])
 # plot_BH
 ggsave(paste0("results_plot_BH.png"), plot_BH, width=8, height=3)
+
 
