@@ -168,6 +168,7 @@ fit_params.EB.mle <- function(epsilon=1e-4, df0) {
 alphas = c(0.01, 0.05, 0.10, 0.15) #, 0.20, 0.25, 0.5)
 df.EB.results.full = tibble()
 df_pvals_BH.full = tibble()
+df_nsig.full = tibble()
 
 for (stroke_category in unique(df0$stroke_grp)) {
   print(stroke_category)
@@ -196,7 +197,6 @@ for (stroke_category in unique(df0$stroke_grp)) {
     arrange(p_val) 
   df.EB.results$stroke_category = stroke_category
   df.EB.results
-  write_csv(df.EB.results, paste0("results_EB_estimates_",stroke_category,".csv"))
   df.EB.results.full = bind_rows(df.EB.results.full, df.EB.results)
   
   ### Multiple Testing: Benjamini-Hochberg (BH) to control the False Discovery Rate (FDR)
@@ -223,20 +223,14 @@ for (stroke_category in unique(df0$stroke_grp)) {
     df_pvals_BH$stroke_category = stroke_category
     df_pvals_BH.full = bind_rows(df_pvals_BH.full, df_pvals_BH)
   }
-  
-  ###
-  df_BH_desc = 
-    tibble(alpha = alphas, nsig = nsig_golfers) %>%
-    mutate(stroke_category = stroke_category) %>%
-    mutate(desc = paste("expect ",round((1-alpha)*nsig),"of",nsig,"golfers are significantly nonzero at \U1D6FC"))
-  df_BH_desc
-  # write_csv(df_BH_desc, paste0("results_desc_BH_",stroke_category,".csv"))
-  gt_BH_desc = gt::gt(df_BH_desc)
-  # gt_BH_desc
-  gt::gtsave(gt_BH_desc, paste0("results_plot_BH_desc_",stroke_category,".png"))
+  df_nsig = tibble(alpha = alphas, nsig = nsig_golfers, stroke_category = stroke_category)
+  df_nsig
+  df_nsig.full = bind_rows(df_nsig.full, df_nsig)
+
 }
 df.EB.results.full$stroke_category = factor(df.EB.results.full$stroke_category, levels = stroke_grp_levels)
 df_pvals_BH.full$stroke_category = factor(df_pvals_BH.full$stroke_category, levels = stroke_grp_levels)
+df_nsig.full$stroke_category = factor(df_nsig.full$stroke_category, levels = stroke_grp_levels)
 
 ################
 ### Plotting ###
@@ -245,6 +239,7 @@ df_pvals_BH.full$stroke_category = factor(df_pvals_BH.full$stroke_category, leve
 ###
 df.EB.results.full
 df_pvals_BH.full
+df_nsig.full
 
 ### visualize
 num_golfers = nrow(df.EB.results)
@@ -316,4 +311,47 @@ plot_BH =
 # plot_BH
 ggsave(paste0("results_plot_BH.png"), plot_BH, width=8, height=3)
 
+### Top 5 Golfers
+top_N = 5
+df_topGolfers = 
+  df.EB.results.full %>%
+  arrange(stroke_category, -mu.hat.i) %>%
+  group_by(stroke_category) %>%
+  slice_head(n = top_N) %>%
+  select(stroke_category, Player, mu.hat.i, N) %>%
+  rename(Stroke = stroke_category, mu_hat = mu.hat.i)
+df_topGolfers
+
+gt_topGolfers = 
+  gt(df_topGolfers) %>%
+  fmt_number("mu_hat", decimals=3) %>%
+  # cols_label(mu_hat = "\U00B5") %>%
+  cols_label(mu_hat = html("Estimated \U00B5 via <br> Empirical Bayes")) %>%
+  tab_options(row_group.as_column = TRUE)  %>%
+  gt::tab_style(
+    style = gt::cell_text(weight = "bold"),
+    locations = gt::cells_row_groups(groups = everything())
+  )  
+# gt_topGolfers
+gtsave(gt_topGolfers, "results_plot_topGolfers.png")
+
+### Num significant golfers table
+df_nSigGolfers = 
+  df_nsig.full %>%
+  relocate(stroke_category, .before = alpha) %>%
+  rename(Stroke = stroke_category) %>%
+  mutate(x = (1-alpha)*nsig) %>%
+  group_by(Stroke)
+df_nSigGolfers
+
+gt_nSigGolfers = 
+  gt(df_nSigGolfers) %>%
+  cols_label(alpha = "\U1D6FC", nsig = "M", x = "(1-\U1D6FC)•M") %>%
+  tab_options(row_group.as_column = TRUE)  %>%
+  gt::tab_style(
+    style = gt::cell_text(weight = "bold"),
+    locations = gt::cells_row_groups(groups = everything())
+  ) 
+# gt_nSigGolfers
+gtsave(gt_nSigGolfers, paste0("results_plot_BH_nSig.png"))
 
