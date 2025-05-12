@@ -272,6 +272,8 @@ ggsave(paste0("results_plot_EB_shrinkage.png"), plot_EB_shrinkage, width=10, hei
 ### plot Benjamini Hochberg
 max_rank = (df_pvals_BH.full %>% group_by(stroke_category) %>% filter(pval <= max(alphas)) %>% reframe(m=max(rank)) %>% reframe(m=max(m)))$m
 max_rank
+max_p = (df_pvals_BH.full %>% filter(rank <= max_rank) %>% reframe(p=max(bh_threshold)) )$p
+max_p
 plot_BH0 = 
   df_pvals_BH.full %>%
   ggplot(aes(x = rank)) +
@@ -283,20 +285,24 @@ plot_BH0 =
     x = "P-value Rank",
     y = "P-value",
   ) +
-  ylim(c(0, max(alphas))) +
+  # ylim(c(0, max(alphas))) +
+  ylim(c(0, max_p)) +
   xlim(c(0,max_rank)) +
+  theme(panel.spacing = unit(2, "lines")) +
   scale_color_manual(name = "\U1D6FC", values=brewer.pal(9, "PuRd")[4:8])
 # plot_BH0
-ggsave(paste0("results_plot_BH0.png"), plot_BH0, width=8, height=3)
+ggsave(paste0("results_plot_BH0.png"), plot_BH0, width=9, height=3)
 
 ### plot Benjamini Hochberg
 max_ranks = df_pvals_BH.full %>% filter(alpha == max(alphas), rank > 25) %>% group_by(stroke_category) %>% mutate(diff = abs(pval - bh_threshold)) %>% arrange(diff) %>% slice_head() %>% ungroup() %>% select(stroke_category, rank) %>% rename(max_rank = rank)
 max_ranks$max_rank = max_ranks$max_rank + 5
 max_ranks
+max_p = (df_pvals_BH.full %>% filter(rank <= max_rank) %>% reframe(p=max(bh_threshold)) )$p
+max_p
 plot_BH = 
   df_pvals_BH.full %>%
   left_join(max_ranks) %>%
-  filter(pval <= max(alphas), rank <= max_rank) %>%
+  filter(pval <= max(alphas), rank <= max_rank ) %>%
   ggplot(aes(x = rank)) +
   facet_wrap(~ stroke_category, scales="free_x") + 
   geom_point(aes(y = pval), color = "black", size = 0.5, shape=21) +
@@ -306,10 +312,12 @@ plot_BH =
     x = "P-value Rank",
     y = "P-value",
   ) +
-  ylim(c(0, max(alphas))) +
+  # ylim(c(0, max(alphas))) +
+  ylim(c(0, max_p)) +
+  theme(panel.spacing = unit(2, "lines")) +
   scale_color_manual(name = "\U1D6FC", values=brewer.pal(9, "PuRd")[4:8])
 # plot_BH
-ggsave(paste0("results_plot_BH.png"), plot_BH, width=8, height=3)
+ggsave(paste0("results_plot_BH.png"), plot_BH, width=9, height=3)
 
 ### Top 5 Golfers
 top_N = 5

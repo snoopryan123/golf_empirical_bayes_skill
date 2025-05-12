@@ -127,9 +127,11 @@ plot_nHoles_hist =
   geom_histogram(aes(x=nHoles),fill="black") + 
   geom_vline(xintercept=0,linetype="dashed",color="gray50",linewidth=1.5) +
   geom_vline(xintercept=100,linetype="dashed",color="gray50",linewidth=1.5) +
-  xlab("number of holes")
+  # labs(title="Empirical Distribution of Golfers' Number of Holes") +
+  xlab("Number of Holes") +
+  ylab("Count")
 # plot_nHoles_hist
-ggsave(paste0("results_plot_nHoles_hist.png"),plot_nHoles_hist,width=6,height=5)
+ggsave(paste0("results_plot_nHoles_hist.png"),plot_nHoles_hist,width=5,height=4)
 
 ##################################################
 ### Bin into driving, putting, and approaching ###
@@ -200,7 +202,10 @@ df_3grps_2
 ### visualize nStrokes by group
 plot_Nstrokes_hist =
   df_3grps_2 %>% ggplot(aes(x = nStrokes)) + facet_wrap(~stroke_grp) + 
-  geom_bar(fill="black") + scale_x_continuous(breaks=1:15)
+  geom_bar(fill="black") + 
+  scale_x_continuous(breaks=1:15) +
+  # labs(title="Empirical Distribution of the Number of Strokes on a Hole") +
+  ylab("Count") + xlab("Number of Strokes")
 # plot_Nstrokes_hist
 ggsave(paste0("results_plot_Nstrokes_hist.png"),plot_Nstrokes_hist,width=8,height=2.5)
 
