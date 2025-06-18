@@ -31,6 +31,31 @@ metrics_list = list(
   "Putting" = "Putts Under Expected (higher is better)"
 )
 
+#################
+### EDA plot ###
+#################
+
+table(df0$Player)
+
+player_str = "Spieth|Woods|Blixt"
+
+plot_exGolferDists =
+  df0 %>% 
+  filter(str_detect(Player, player_str)) %>%
+  ggplot(aes(x = SUE, fill = Player)) +
+  facet_wrap(~ stroke_grp) +
+  geom_vline(xintercept=0, color="gray60", linetype="dashed") +
+  # xlab(TeX("Strokes under expected $X_{ijs}$")) + 
+  xlab(TeX("Strokes Under Expected $X_{ijs}$")) + 
+  # ylab("Density") +
+  # geom_density(alpha=0.3) +
+  ylab("Count") +
+  geom_histogram(alpha=1) +
+  scale_fill_brewer(palette="Set1")
+# plot_exGolferDists
+ggsave(paste0("results_plot_exGolferDists.png"), 
+       plot_exGolferDists, width=10, height=3)
+
 ######################################
 ### Empirical Bayes Skill Function ###
 ######################################
@@ -241,6 +266,18 @@ df.EB.results.full
 df_pvals_BH.full
 df_nsig.full
 
+### contextualize the effect sizes
+df.EB.results.full %>%
+  group_by(stroke_category) %>%
+  reframe(
+    qL = quantile(mu.hat.i, 0.05),
+    qU = quantile(mu.hat.i, 0.95)
+  ) %>%
+  mutate(
+    delta_hole = qU - qL,
+    delta_tourn = delta_hole*72,
+  )
+
 ### visualize
 num_golfers = nrow(df.EB.results)
 plot_EB_estimates = 
@@ -249,10 +286,10 @@ plot_EB_estimates =
   facet_wrap(~ stroke_category) + 
   geom_histogram(fill="black") +
   geom_vline(xintercept=0,linetype="dashed",color="gray50",linewidth=1.5) +
-  xlab(TeX("Empirical Bayes estimate $\\hat{\\mu}^{(EB)}_i$")) +
+  xlab(TeX("Empirical Bayes estimate $\\hat{\\mu}^{(EB)}_{is}$")) +
   # scale_x_continuous(breaks=seq(-1,1,by=0.05)) +
-  ylab("Count") +
-  labs(title = paste0("Distribution of Estimated Golfer Skills"))
+  labs(title = paste0("Distribution of Estimated Golfer Skills")) +
+  ylab("Count")
 # plot_EB_estimates
 ggsave(paste0("results_plot_EB.png"), plot_EB_estimates, width=8, height=3)
 
@@ -261,8 +298,8 @@ plot_EB_shrinkage =
   df.EB.results.full  %>%
   ggplot(aes(x=mu.hat.MLE.i, y=mu.hat.i, color=N, size=N)) +
   facet_wrap(~ stroke_category) + 
-  xlab(TeX("Observed Mean $\\hat{\\mu}^{(MLE)}_i$")) +
-  ylab(TeX("Empirical Bayes estimate $\\hat{\\mu}^{(EB)}_i$")) +
+  xlab(TeX("Observed Mean $\\hat{\\mu}^{(MLE)}_{is}$")) +
+  ylab(TeX("Empirical Bayes estimate $\\hat{\\mu}^{(EB)}_{is}$")) +
   geom_abline(intercept=0, slope=1, linewidth=1, linetype="dashed", color="gray60") +
   geom_point(alpha=0.6) +
   labs(title = paste0("Visualizing Shrinkage in Estimating Golfer Skills"))
@@ -363,3 +400,5 @@ gt_nSigGolfers =
 # gt_nSigGolfers
 gtsave(gt_nSigGolfers, paste0("results_plot_BH_nSig.png"))
 
+
+#
