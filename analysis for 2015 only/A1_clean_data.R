@@ -1,24 +1,20 @@
 
 source("A0_header.R")
 
-##########################
-### Read the golf data ###
-##########################
+#####################################
+### cleaned stroke-by-stroke data ###
+#####################################
 
-### read the 2015 & 2017 golf data
-D15 = read_delim("data_rshot_2015.TXT", delim=";")
-D17 = read_delim("data_rshot_2017.TXT", delim=";")
-all(names(D15)==names(D17))
-D = bind_rows(D15, D17)
-dim(D)
-D
-
-# ### read just the 2015 golf data
+# ### read golf data
 # D15 = read_delim("data_rshot_2015.TXT", delim=";")
-# D = D15
-# D = read_delim("data_rshot_2015.TXT", delim=";")
+# D17 = read_delim("data_rshot_2017.TXT", delim=";")
+# all(names(D15)==names(D17))
+# D = bind_rows(D15, D17)
+# dim(D)
+# D
 
-### clean the initial golf data
+### read golf data
+D = read_delim("data_rshot_2015.TXT", delim=";")
 names(D) = str_remove_all(names(D), "^ ")
 names(D) = str_remove_all(names(D), "^ ")
 names(D) = str_replace_all(names(D), " ", "_")
@@ -40,52 +36,20 @@ D = D %>%
   relocate(shots_to_hole_post, .after = shots_to_hole_pre) 
 # View(D[1:1000,])
 
-###########################################
-### Player-Season Stroke-by-Stroke Data ###
-###########################################
-
-### use this code chunk if you want each player's data from all seasons lumped together under that player
-{
-  # df_strokes1 = 
-  #   D %>%
-  #   mutate(
-  #     Player = paste(Player_First_Name, Player_Last_Name),
-  #     stroke_info = paste0(Tour_Description,"_",Year,"_T",Tourn.num,"_C",Course_num,"_R",Round),
-  #     hole = as.numeric(Hole),
-  #   ) %>%
-  #   select(
-  #     Player_num, Player, From_Location_Scorer, stroke_info, hole,
-  #     shots_to_hole_pre, shots_to_hole_post, Strokes_Gained_Baseline, #Strokes_Gained_Category,
-  #   ) %>%
-  #   arrange(Player_num, stroke_info, hole)
-  # df_strokes1
-}
-
-### use this code chunk if you want player-season data--each player's data separated for each season
-{
-  df_strokes1 = 
-    D %>%
-    mutate(
-      Player = paste(Year, Player_First_Name, Player_Last_Name),
-      stroke_info = paste0(Tour_Description,"_",Year,"_T",Tourn.num,"_C",Course_num,"_R",Round),
-      hole = as.numeric(Hole),
-    ) %>%
-    group_by(Player_num,Year) %>%
-    mutate(Player_num_1 = cur_group_id()) %>%
-    ungroup() %>%
-    select(-Player_num) %>%
-    rename(Player_num = Player_num_1) %>%
-    select(
-      Player_num, Player, From_Location_Scorer, stroke_info, hole,
-      shots_to_hole_pre, shots_to_hole_post, Strokes_Gained_Baseline, #Strokes_Gained_Category,
-    ) %>%
-    arrange(Player_num, stroke_info, hole)
-  df_strokes1
-}
-
-#####################################
-### cleaned stroke-by-stroke data ###
-#####################################
+### stroke-by-stroke data: strokes gained 
+df_strokes1 = 
+  D %>%
+  mutate(
+    Player = paste(Player_First_Name, Player_Last_Name),
+    stroke_info = paste0(Tour_Description,"_",Year,"_T",Tourn.num,"_C",Course_num,"_R",Round),
+    hole = as.numeric(Hole),
+  ) %>%
+  select(
+    Player_num, Player, From_Location_Scorer, stroke_info, hole,
+    shots_to_hole_pre, shots_to_hole_post, Strokes_Gained_Baseline, #Strokes_Gained_Category,
+  ) %>%
+  arrange(Player_num, stroke_info, hole)
+df_strokes1
 
 ### expected number of strokes to holeout, part 1
 df_strokes2 = 
@@ -131,7 +95,7 @@ while(num_NA_relevant > 0) {
   counter = counter + 1
 } 
 df_strokes3
-get_num_NA_relevant(df_strokes3)
+sum(is.na(df_strokes3$xstrokes_pre)) + sum(is.na(df_strokes3$xstrokes_post))
 
 #####################
 ### Min num holes ###
@@ -147,8 +111,7 @@ df_nHoles =
 df_nHoles
 
 ### keep players whose num holes exceeds a threshold
-# min_nHoles = 100
-min_nHoles = 150
+min_nHoles = 100
 df_strokes_f = 
   df_strokes3 %>%
   left_join(df_nHoles) %>%
@@ -241,7 +204,6 @@ plot_Nstrokes_hist =
   df_3grps_2 %>% ggplot(aes(x = nStrokes)) + facet_wrap(~stroke_grp) + 
   geom_bar(fill="black") + 
   scale_x_continuous(breaks=1:15) +
-  scale_y_continuous(labels = label_comma()) +
   # labs(title="Empirical Distribution of the Number of Strokes on a Hole") +
   ylab("Count") + xlab("Number of Strokes")
 # plot_Nstrokes_hist
@@ -266,10 +228,8 @@ s5=paste0(nrow(df_3grps_f %>% filter(stroke_grp=="Approaching")%>%distinct(Playe
 s6=paste0("unique seasons: ", paste0(unique(D$Year),collapse=", "))
 s7=paste0("num unique seasons: ", length(unique(D$Year)))
 s8=paste0("tours: ", paste0(unique(D$Tour_Description),collapse=", "))
-# s9=paste0("num unique tournaments: ", length(unique(D$Tournament_Name)))
-s9=paste0("num unique tournaments: ", nrow(D %>% select(Tournament_Name, Year) %>% distinct()) )
-s10=paste0("min num holes: ", min_nHoles)
-data_info_table = gt::gt(tibble(x = c(s1,s2,s3,s4,s5,s6,s7,s8,s9,s10)))
+s9=paste0("num unique tournaments: ", length(unique(D$Tournament_Name)))
+data_info_table = gt::gt(tibble(x = c(s1,s2,s3,s4,s5,s6,s7,s8,s9)))
 # data_info_table
 gt::gtsave(data_info_table, paste0("results_plot_summaryDataInfo.png"))
 

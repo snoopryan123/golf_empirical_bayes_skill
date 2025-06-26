@@ -41,8 +41,7 @@ player_str = "Spieth|Woods|Blixt"
 
 plot_exGolferDists =
   df0 %>% 
-  # filter(str_detect(Player, player_str)) %>%
-  filter(str_detect(Player, player_str) & str_detect(Player, "2015")) %>%
+  filter(str_detect(Player, player_str)) %>%
   ggplot(aes(x = SUE, fill = Player)) +
   facet_wrap(~ stroke_grp) +
   geom_vline(xintercept=0, color="gray60", linetype="dashed") +
@@ -302,7 +301,6 @@ plot_EB_shrinkage =
   xlab(TeX("Observed Mean $\\hat{\\mu}^{(MLE)}_{is}$")) +
   ylab(TeX("Empirical Bayes estimate $\\hat{\\mu}^{(EB)}_{is}$")) +
   geom_abline(intercept=0, slope=1, linewidth=1, linetype="dashed", color="gray60") +
-  geom_abline(intercept=0, slope=0, linewidth=0.5, linetype="solid", color="gray70") +
   geom_point(alpha=0.6) +
   labs(title = paste0("Visualizing Shrinkage in Estimating Golfer Skills"))
 # plot_EB_shrinkage
