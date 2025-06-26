@@ -11,7 +11,7 @@ D17 = read_delim("data_rshot_2017.TXT", delim=";")
 all(names(D15)==names(D17))
 D = bind_rows(D15, D17)
 dim(D)
-D
+D 
 
 # ### read just the 2015 golf data
 # D15 = read_delim("data_rshot_2015.TXT", delim=";")
