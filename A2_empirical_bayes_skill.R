@@ -268,7 +268,8 @@ df_pvals_BH.full
 df_nsig.full
 
 ### contextualize the effect sizes
-df.EB.results.full %>%
+gt_effect_sizes = 
+  df.EB.results.full %>%
   group_by(stroke_category) %>%
   reframe(
     qL = quantile(mu.hat.i, 0.05),
@@ -277,7 +278,14 @@ df.EB.results.full %>%
   mutate(
     delta_hole = qU - qL,
     delta_tourn = delta_hole*72,
-  )
+  ) %>%
+  gt() %>%
+  fmt_number("qL", decimals=3) %>%
+  fmt_number("qU", decimals=3) %>%
+  fmt_number("delta_hole", decimals=3) %>%
+  fmt_number("delta_tourn", decimals=1) 
+# gt_effect_sizes
+gtsave(gt_effect_sizes, "results_plot_effectSizes.png")
 
 ### visualize
 num_golfers = nrow(df.EB.results)
@@ -397,6 +405,7 @@ df_nSigGolfers
 gt_nSigGolfers = 
   gt(df_nSigGolfers) %>%
   cols_label(alpha = "\U1D6FC", nsig = "M", x = "(1-\U1D6FC)•M") %>%
+  fmt_number("x", decimals=1) %>%
   tab_options(row_group.as_column = TRUE)  %>%
   gt::tab_style(
     style = gt::cell_text(weight = "bold"),
