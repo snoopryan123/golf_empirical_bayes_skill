@@ -4,3 +4,9 @@ data_rshot_2017.TXT
 *.TXT
 *.txt
 analysis\ for\ 2015\ only/
+.DS_Store
+.RData
+.Rhistory
+*.png
+*.jpg
+*.jpeg
