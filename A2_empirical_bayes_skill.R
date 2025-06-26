@@ -363,15 +363,18 @@ df_topGolfers =
   arrange(stroke_category, -mu.hat.i) %>%
   group_by(stroke_category) %>%
   slice_head(n = top_N) %>%
-  select(stroke_category, Player, mu.hat.i, N) %>%
-  rename(Stroke = stroke_category, mu_hat = mu.hat.i)
+  select(stroke_category, Player, mu.hat.i, mu.hat.MLE.i, N) %>%
+  rename(Stroke = stroke_category, mu_hat_EB = mu.hat.i, mu_hat_MLE = mu.hat.MLE.i)
 df_topGolfers
 
 gt_topGolfers = 
   gt(df_topGolfers) %>%
-  fmt_number("mu_hat", decimals=3) %>%
+  fmt_number("mu_hat_EB", decimals=3) %>%
+  fmt_number("mu_hat_MLE", decimals=3) %>%
   # cols_label(mu_hat = "\U00B5") %>%
-  cols_label(mu_hat = html("Estimated \U00B5 via <br> Empirical Bayes")) %>%
+  # cols_label(mu_hat_EB = html("Estimated \U00B5 via <br> Empirical Bayes")) %>%
+  cols_label(mu_hat_EB = html("Empirical Bayes <br> Estimate")) %>%
+  cols_label(mu_hat_MLE = html("Observed Mean <br> (MLE)")) %>%
   tab_options(row_group.as_column = TRUE)  %>%
   gt::tab_style(
     style = gt::cell_text(weight = "bold"),
