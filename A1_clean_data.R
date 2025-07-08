@@ -133,13 +133,27 @@ while(num_NA_relevant > 0) {
 df_strokes3
 get_num_NA_relevant(df_strokes3)
 
+### tourn & num rounds in a tournament
+df_strokes4 = 
+  df_strokes3 %>%
+  mutate(tourn = str_remove(stroke_info, "_R.*")) %>%
+  relocate(tourn, .after=stroke_info) %>%
+  group_by(tourn) %>%
+  mutate(
+    nRoundsInTourn = str_extract(stroke_info, "(?<=_R).*"),
+    nRoundsInTourn = max(as.numeric(nRoundsInTourn)),
+  ) %>%
+  relocate(nRoundsInTourn, .after=tourn) %>%
+  ungroup()
+df_strokes4
+
 #####################
 ### Min num holes ###
 #####################
 
 ### each player's number of holes
 df_nHoles = 
-  df_strokes3 %>% 
+  df_strokes4 %>% 
   drop_na() %>%
   filter(From_Location_Scorer == "Tee Box") %>%
   group_by(Player_num) %>%
@@ -150,7 +164,7 @@ df_nHoles
 # min_nHoles = 100
 min_nHoles = 150
 df_strokes_f = 
-  df_strokes3 %>%
+  df_strokes4 %>%
   left_join(df_nHoles) %>%
   filter(nHoles >= min_nHoles) %>%
   drop_na() 
@@ -212,7 +226,7 @@ nrow(df_3grps_1)
 ###   for approaching: strokes under expected
 df_3grps_2 = 
   df_3grps_1 %>%
-  group_by(Player_num, Player, stroke_info, hole, nShots, nHoles, stroke_grp) %>%
+  group_by(Player_num, Player, stroke_info, tourn, nRoundsInTourn, hole, nShots, nHoles, stroke_grp) %>%
   reframe(SUE = sum(SG), nStrokes=n()) %>%
   group_by(Player_num, stroke_grp) %>%
   mutate(nHoles_grp = n()) %>%
