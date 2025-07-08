@@ -37,7 +37,8 @@ D = D %>%
   ) %>%
   relocate(Hole_Score, .after = Shot) %>%
   relocate(shots_to_hole_pre, .after = Hole_Score) %>%
-  relocate(shots_to_hole_post, .after = shots_to_hole_pre) 
+  relocate(shots_to_hole_post, .after = shots_to_hole_pre) %>%
+  rename(SG = Strokes_Gained_Baseline)
 # View(D[1:1000,])
 
 ###########################################
@@ -55,7 +56,7 @@ D = D %>%
   #   ) %>%
   #   select(
   #     Player_num, Player, From_Location_Scorer, stroke_info, hole,
-  #     shots_to_hole_pre, shots_to_hole_post, Strokes_Gained_Baseline, #Strokes_Gained_Category,
+  #     shots_to_hole_pre, shots_to_hole_post, SG, #Strokes_Gained_Category,
   #   ) %>%
   #   arrange(Player_num, stroke_info, hole)
   # df_strokes1
@@ -77,65 +78,15 @@ D = D %>%
     rename(Player_num = Player_num_1) %>%
     select(
       Player_num, Player, From_Location_Scorer, stroke_info, hole,
-      shots_to_hole_pre, shots_to_hole_post, Strokes_Gained_Baseline, #Strokes_Gained_Category,
+      shots_to_hole_pre, shots_to_hole_post, SG, #Strokes_Gained_Category,
     ) %>%
     arrange(Player_num, stroke_info, hole)
   df_strokes1
 }
 
-#####################################
-### cleaned stroke-by-stroke data ###
-#####################################
-
-### expected number of strokes to holeout, part 1
-df_strokes2 = 
-  df_strokes1 %>%
-  rename(SG = Strokes_Gained_Baseline) %>%
-  group_by(Player_num, stroke_info, hole,) %>%
-  mutate(
-    nShots = first(shots_to_hole_pre),
-    xstrokes_post = ifelse(shots_to_hole_post==0, 0, NA),
-    xstrokes_pre = xstrokes_post + SG +1,
-  ) %>%
-  ungroup() %>%
-  relocate(nShots, .after = hole) %>%
-  relocate(xstrokes_pre, .before = xstrokes_post)
-df_strokes2
-sum(is.na(df_strokes2$xstrokes_pre)) + sum(is.na(df_strokes2$xstrokes_post))
-
-### expected number of strokes to holeout, part 2
-###     StrokesGained = xstrokesPre - xstrokesPost - 1
-### --> xstrokesPre = StrokesGained + xstrokesPost + 1
-df_strokes3 = df_strokes2
-get_num_NA_relevant <- function(df_strokes3) {
-  sum(is.na(df_strokes3$xstrokes_pre)) + sum(is.na(df_strokes3$xstrokes_post))
-}
-num_NA_relevant = get_num_NA_relevant(df_strokes3)
-counter = 0
-while(num_NA_relevant > 0) {
-  print(counter)
-  df_strokes3 = 
-    df_strokes3 %>%
-    group_by(Player_num, stroke_info, hole,) %>%
-    mutate(
-      xstrokes_post = ifelse(is.na(xstrokes_post), lead(xstrokes_pre), xstrokes_post),
-      xstrokes_pre = xstrokes_post + SG +1,
-    ) %>%
-    ungroup() 
-  
-  if (get_num_NA_relevant(df_strokes3) == num_NA_relevant) {
-    break
-  } else {
-    num_NA_relevant = get_num_NA_relevant(df_strokes3)
-  }
-  counter = counter + 1
-} 
-df_strokes3
-get_num_NA_relevant(df_strokes3)
-
 ### tourn & num rounds in a tournament
-df_strokes4 = 
-  df_strokes3 %>%
+df_strokes1A = 
+  df_strokes1 %>%
   mutate(tourn = str_remove(stroke_info, "_R.*")) %>%
   relocate(tourn, .after=stroke_info) %>%
   group_by(tourn) %>%
@@ -145,11 +96,102 @@ df_strokes4 =
   ) %>%
   relocate(nRoundsInTourn, .after=tourn) %>%
   ungroup()
-df_strokes4
+df_strokes1A
+
+##########################################################
+### Check absurdly high driving strokes gained numbers ###
+##########################################################
+
+# ### check absurd driving strokes gained numbers
+# temp = df_strokes1A %>%
+#   filter(From_Location_Scorer=="Tee Box") %>%
+#   group_by(Player,Player_num,tourn) %>%
+#   reframe(n=n(), SUE=sum(SG)) %>%
+#   filter(n==72) %>%
+#   arrange(-SUE)
+# temp
+# hist(temp$SUE)
+# 
+# temp %>%
+#   filter(SUE > 12) %>%
+#   distinct(tourn)
+# 
+# temp = 
+#   df_strokes1A %>%
+#   filter(Player_num == 957 & tourn == "PGA TOUR_2017_T350_C236" & From_Location_Scorer=="Tee Box")
+# temp
+# hist(temp$SG)
+# nrow(temp)
+# sum(temp$SG)
+# 
+# temp = 
+#   df_strokes1A %>%
+#   filter(Player_num == 925 & tourn == "PGA TOUR_2017_T350_C236" & From_Location_Scorer=="Tee Box")
+# temp
+# hist(temp$SG)
+# nrow(temp)
+# sum(temp$SG)
+
+#############################################
+### expected number of strokes to holeout ###
+#############################################
+
+# ### expected number of strokes to holeout, part 1
+# df_strokes2 = 
+#   df_strokes1A %>%
+#   group_by(Player_num, stroke_info, hole,) %>%
+#   mutate(
+#     nShots = first(shots_to_hole_pre),
+#     xstrokes_post = ifelse(shots_to_hole_post==0, 0, NA),
+#     xstrokes_pre = xstrokes_post + SG +1,
+#   ) %>%
+#   ungroup() %>%
+#   relocate(nShots, .after = hole) %>%
+#   relocate(xstrokes_pre, .before = xstrokes_post)
+# df_strokes2
+# sum(is.na(df_strokes2$xstrokes_pre)) + sum(is.na(df_strokes2$xstrokes_post))
+# 
+# ### expected number of strokes to holeout, part 2
+# ###     StrokesGained = xstrokesPre - xstrokesPost - 1
+# ### --> xstrokesPre = StrokesGained + xstrokesPost + 1
+# df_strokes3 = df_strokes2
+# get_num_NA_relevant <- function(df_strokes3) {
+#   sum(is.na(df_strokes3$xstrokes_pre)) + sum(is.na(df_strokes3$xstrokes_post))
+# }
+# num_NA_relevant = get_num_NA_relevant(df_strokes3)
+# counter = 0
+# while(num_NA_relevant > 0) {
+#   print(counter)
+#   df_strokes3 = 
+#     df_strokes3 %>%
+#     group_by(Player_num, stroke_info, hole,) %>%
+#     mutate(
+#       xstrokes_post = ifelse(is.na(xstrokes_post), lead(xstrokes_pre), xstrokes_post),
+#       xstrokes_pre = xstrokes_post + SG +1,
+#     ) %>%
+#     ungroup() 
+#   
+#   if (get_num_NA_relevant(df_strokes3) == num_NA_relevant) {
+#     break
+#   } else {
+#     num_NA_relevant = get_num_NA_relevant(df_strokes3)
+#   }
+#   counter = counter + 1
+# } 
+# df_strokes3
+# get_num_NA_relevant(df_strokes3)
 
 #####################
 ### Min num holes ###
 #####################
+
+#FIXME -- only if previous section (expected number of strokes to holeout) is commented out
+df_strokes4 = 
+  df_strokes1A %>%
+  group_by(Player_num, stroke_info, hole) %>%
+  mutate(nShots = first(shots_to_hole_pre)) %>%
+  ungroup() %>%
+  relocate(nShots, .after = hole) 
 
 ### each player's number of holes
 df_nHoles = 
@@ -261,8 +303,32 @@ plot_Nstrokes_hist =
 # plot_Nstrokes_hist
 ggsave(paste0("results_plot_Nstrokes_hist.png"),plot_Nstrokes_hist,width=8,height=2.5)
 
+###################################################
+### Remove bad tournaments with outlier numbers ###
+###################################################
+
+### check absurd driving strokes gained numbers
+temp = 
+  df_3grps_2 %>%
+  filter(stroke_grp == "Driving") %>%
+  group_by(Player,Player_num,tourn) %>%
+  reframe(n=n(), SUE=sum(SUE)) %>%
+  filter(n==72) %>%
+  arrange(-SUE)
+temp
+
+df_outlier_tournaments = 
+  temp %>%
+  filter(SUE > 12) %>%
+  distinct(tourn)
+df_outlier_tournaments
+
+df_3grps_3 = df_3grps_2 %>% filter(!(tourn %in% df_outlier_tournaments$tourn))
+nrow(df_3grps_2)
+nrow(df_3grps_3)
+
 ### final dataset
-df_3grps_f = df_3grps_2
+df_3grps_f = df_3grps_3
 
 ############################
 ### Dataset summary info ###
@@ -281,7 +347,8 @@ s6=paste0("unique seasons: ", paste0(unique(D$Year),collapse=", "))
 s7=paste0("num unique seasons: ", length(unique(D$Year)))
 s8=paste0("tours: ", paste0(unique(D$Tour_Description),collapse=", "))
 # s9=paste0("num unique tournaments: ", length(unique(D$Tournament_Name)))
-s9=paste0("num unique tournaments: ", nrow(D %>% select(Tournament_Name, Year) %>% distinct()) )
+# s9=paste0("num unique tournaments: ", nrow(D %>% select(Tournament_Name, Year) %>% distinct()) )
+s9=paste0("num unique tournaments: ", nrow(df_3grps_f %>% distinct(tourn)))
 s10=paste0("min num holes: ", min_nHoles)
 data_info_table = gt::gt(tibble(x = c(s1,s2,s3,s4,s5,s6,s7,s8,s9,s10)))
 # data_info_table

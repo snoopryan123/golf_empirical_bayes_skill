@@ -21,10 +21,13 @@ df_inTourn_0 =
   df0 %>%
   group_by(Player_num, Player, tourn) %>%
   mutate(
-    nRounds_playerTourn = str_extract(stroke_info, "(?<=_R).*"),
-    nRounds_playerTourn = max(as.numeric(nRounds_playerTourn)),
+    round = as.numeric(str_extract(stroke_info, "(?<=_R).*")),
+    nRounds_playerTourn = max(round),
+    hole_num = hole + (round-1)*18,
   ) %>%
-  relocate(nRounds_playerTourn, .after=nRoundsInTourn)  %>%
+  relocate(round, .after=nRoundsInTourn)  %>%
+  relocate(nRounds_playerTourn, .after=round)  %>%
+  relocate(hole_num, .after=hole)  %>%
   ungroup() %>%
   mutate(playedInAllRds = nRoundsInTourn == nRounds_playerTourn)
 df_inTourn_0
@@ -42,6 +45,23 @@ df_inTourn_1 =
   ungroup() 
 df_inTourn_1
 
+# ### check
+# temp = 
+#   df_inTourn_1 %>%
+#   filter(stroke_grp == "Driving") %>%
+#   filter(nStrokes==72) %>%
+#   arrange(-SUE)
+# temp
+# df_absurd_driving_tournaments = temp %>% filter(SUE > 12) %>% distinct(tourn)
+# df_absurd_driving_tournaments
+# temp %>%
+#   filter(tourn %in% df_absurd_driving_tournaments$tourn) %>%
+#   View()
+# df_inTourn_1 = df_inTourn_1 %>% filter(!(tourn %in% df_absurd_driving_tournaments$tourn))
+# temp = df_inTourn_0 %>% 
+#   filter(Player_num == 957 & tourn == "PGA TOUR_2017_T350_C236" & stroke_grp=="Driving")
+# View(temp)
+
 ### pivot
 df_inTourn_2 = 
   df_inTourn_1 %>%
@@ -57,6 +77,10 @@ lm_inTourn <- lm(
   data = df_inTourn_2
 )
 round(lm_inTourn$coefficients,3)
+coeff_table = gt::gt(tibble(coeff=names(lm_inTourn$coefficients), beta=round(lm_inTourn$coefficients,3), ))
+# coeff_table
+gt::gtsave(coeff_table, paste0("results_plot_coeffInfoTable.png"))
+
 
 ### get TOP and MIDDLE player buckets 
 M = 10
@@ -125,7 +149,5 @@ plot_boxplot_topMid =
   ylab("Strokes Under Expected")
 # plot_boxplot_topMid
 ggsave("results_plot_boxplot_topMid.png",width=10,height=4)
-
-
 
 
