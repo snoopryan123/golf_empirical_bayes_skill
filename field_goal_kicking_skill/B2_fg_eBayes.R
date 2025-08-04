@@ -153,8 +153,7 @@ length(table(df_fg_1$season))
 SZNS = as.numeric(names(table(df_fg_1$season)))
 SZNS
 
-num_szns_chunk = c(8,16)
-# num_szns_chunk = 4
+num_szns_chunk = c(16)
 
 for (CHUNK_SIZE in num_szns_chunk) {
   
@@ -221,6 +220,9 @@ df_EB_fit = fit_params.EB.mle(df0=df0)
 df_EB_fit
 mu.hat.overall = unique(df_EB_fit$mu.hat)
 mu.hat.overall
+
+df0 %>% distinct(Player_num, Player, N) %>% reframe(median(N))
+df0 %>% distinct(Player_num, Player) %>% reframe(n())
 
 ### cleaned Empirical Bayes results dataframe
 df.EB.results.full = 
