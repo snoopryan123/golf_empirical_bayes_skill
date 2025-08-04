@@ -83,7 +83,7 @@ gt::gtsave(coeff_table, paste0("results_plot_coeffInfoTable.png"))
 
 
 ### get TOP and MIDDLE player buckets 
-M = 10
+M = 5
 
 df_inTourn_isTop = 
   df_inTourn_2 %>% filter(playedInAllRds) %>% # made the cut
@@ -92,8 +92,9 @@ df_inTourn_isTop =
     rank = rank(nStrokesTourn, ties.method = "min"),
     top = rank <= M,
   ) %>%
-  ungroup() %>%
   filter(top) %>%
+  slice_head(n=M) %>%
+  ungroup() %>%
   distinct(Player_num, Player, tourn, top)
 df_inTourn_isTop
 
@@ -107,9 +108,10 @@ df_inTourn_isMiddle =
     middle_U = floor(n_players / 2) + M,
     middle = rank >= middle_L & rank <= middle_U
   ) %>%
+  filter(middle) %>%
+  slice_head(n=M) %>%
   ungroup() %>%
   # select(-n_players, -middle_L, -middle_U) %>%
-  filter(middle) %>%
   distinct(Player_num, Player, tourn, middle)
 df_inTourn_isMiddle
 
@@ -124,11 +126,11 @@ df_inTourn_topMid =
       TRUE ~ "Other",
     )
   ) %>%
-  select(-top, -middle)
+  select(-top, -middle) 
 df_inTourn_topMid
 
 # Step 5: Boxplots comparing Top vs Middle Golfers for each component
-plot_boxplot_topMid = 
+df_plot_boxplot_topMid =
   df_inTourn_topMid %>%
   pivot_longer(
     c(SUE_Driving, SUE_Approaching, SUE_Putting), 
@@ -139,15 +141,27 @@ plot_boxplot_topMid =
     stroke_category=str_remove(stroke_category, "SUE_"),
     stroke_category=factor(stroke_category,levels = stroke_grp_levels)
   ) %>%
-  filter(performance_group != "Other") %>%
+  filter(performance_group != "Other") 
+df_plot_boxplot_topMid
+
+df_plot_boxplot_topMid %>%
+  group_by(performance_group, stroke_category) %>%
+  reframe(
+    med_SUE = median(SUE),
+    mean_SUE = mean(SUE),
+  ) 
+
+plot_boxplot_topMid = 
+  df_plot_boxplot_topMid %>%
   ggplot(aes(x = performance_group, y = SUE))+
   facet_wrap(~stroke_category) +
   geom_hline(yintercept=0, color="gray60",linetype="solid",linewidth=1) +
   geom_boxplot() +
+  scale_y_continuous(breaks=seq(-50,50,by=5)) +
   # labs(caption="Distribution of strokes under expected (sum of strokes gained) in a tournament") +
   xlab("Performance Group") +
   ylab("Strokes Under Expected")
 # plot_boxplot_topMid
-ggsave("results_plot_boxplot_topMid.png",width=10,height=4)
+ggsave("results_plot_boxplot_topMid.png",width=8,height=4)
 
 

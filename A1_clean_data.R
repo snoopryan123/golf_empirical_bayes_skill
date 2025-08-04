@@ -203,7 +203,6 @@ df_nHoles =
 df_nHoles
 
 ### keep players whose num holes exceeds a threshold
-# min_nHoles = 100
 min_nHoles = 150
 df_strokes_f = 
   df_strokes4 %>%
