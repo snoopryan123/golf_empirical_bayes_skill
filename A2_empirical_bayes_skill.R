@@ -366,8 +366,12 @@ plot_BH =
 # plot_BH
 ggsave(paste0("results_plot_BH.png"), plot_BH, width=9, height=3)
 
+################
+### Plotting ###
+################
+
 ### Top N Golfers
-top_N = 7
+top_N = 10
 df_topGolfers = 
   df.EB.results.full %>%
   arrange(stroke_category, -mu.hat.i) %>%
