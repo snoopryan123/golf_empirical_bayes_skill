@@ -1,5 +1,5 @@
 
-source("A0_header.R")
+source("../A0_header.R")
 
 ################
 ### get field goal data 
@@ -7,7 +7,7 @@ source("A0_header.R")
 
 library(nflfastR)
 
-seasons = 2010:2024
+seasons = 2009:2024
 df_pbp_0 = load_pbp(seasons)
 df_pbp_0
 

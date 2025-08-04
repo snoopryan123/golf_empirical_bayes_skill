@@ -1,21 +1,30 @@
 
-source("A0_header.R")
+source("../A0_header.R")
 
 ### load data
 df_fg_1 = read_csv("data_field_goals.csv")
 df_fg_1
 
-df0 = 
+df_fg_2 = 
   df_fg_1 %>%
   select(kicker_player_id, kicker_player_name, season, fg_success, p_baseline) %>%
   rename(kicker_id = kicker_player_id, kicker_name = kicker_player_name) %>%
   group_by(kicker_id, season) %>%
-  mutate(Player_num = cur_group_id(), N =n()) %>%
+  mutate(Player_num = cur_group_id(), N = n()) %>%
   ungroup() %>%
   arrange(Player_num) %>%
   mutate(Player = paste0(season," ",kicker_name)) %>%
   mutate(X = fg_success - p_baseline)
-df0
+df_fg_2
+
+hist(df_fg_2$X)
+
+M = 20 # min num field goal attempts
+table(df_fg_2$N)
+df0 = df_fg_2 %>% filter(N >= M)
+print(c(nrow(df_fg_2), nrow(df0)))
+
+print(paste0("there are ", length(unique(df0$Player_num)), " unique kickers"))
 
 ######################################
 ### Empirical Bayes Skill Function ###
@@ -160,6 +169,8 @@ df_nsig.full = tibble()
 ### fit the empirical bayes parameters
 df_EB_fit = fit_params.EB.mle(df0=df0)
 df_EB_fit
+mu.hat.overall = unique(df_EB_fit$mu.hat)
+mu.hat.overall
 
 ### cleaned Empirical Bayes results dataframe
 df.EB.results.full = 
@@ -173,7 +184,7 @@ df.EB.results.full =
   ) %>%
   relocate(Player, .after=Player_num) %>%
   mutate(
-    p_val = 2*pnorm(-abs(mu.hat.i)/sqrt(V.hat.i))
+    p_val = 2*pnorm(-abs(mu.hat.i - mu.hat.overall)/sqrt(V.hat.i))
   ) %>%
   arrange(-mu.hat.i, p_val) 
 df.EB.results.full
@@ -183,7 +194,7 @@ nsig_golfers = c()
 df_pvals_BH = tibble()
 for (alpha in alphas) {
   ### Multiple Testing: Benjamini-Hochberg (BH) to control the False Discovery Rate (FDR)
-  p_vals = df.EB.results$p_val
+  p_vals = df.EB.results.full$p_val
   p_vals_adjusted_BH = p.adjust(p_vals, method = "BH", n=length(p_vals))
   significant_putters = which(p_vals_adjusted_BH <= alpha) # Identify significant discoveries at FDR 0.05
   nsig = length(significant_putters)
@@ -204,7 +215,6 @@ for (alpha in alphas) {
 df_nsig.full = tibble(alpha = alphas, nsig = nsig_golfers)
 df_nsig.full
 
-
 ################
 ### Plotting ###
 ################
@@ -213,7 +223,6 @@ df_nsig.full
 df.EB.results.full
 df_pvals_BH.full
 df_nsig.full
-
 
 ### contextualize the effect sizes
 gt_effect_sizes = 
@@ -233,8 +242,7 @@ gt_effect_sizes =
 gtsave(gt_effect_sizes, "results_fg_plot_effectSizes.png")
 
 ### visualize
-num_kickers = nrow(df.EB.results)
-mu.hat.overall = unique(df_EB_fit$mu.hat)
+num_kickers = nrow(df.EB.results.full)
 plot_EB_estimates = 
   df.EB.results.full %>%
   ggplot(aes(x = mu.hat.i)) +
@@ -246,57 +254,24 @@ plot_EB_estimates =
 # plot_EB_estimates
 ggsave(paste0("results_fg_plot_EB.png"), plot_EB_estimates, width=6, height=4)
 
-### problem: should shrink to below 0...
-
 ### visualize: how much shrinkage?
 plot_EB_shrinkage = 
   df.EB.results.full  %>%
   ggplot(aes(x=mu.hat.MLE.i, y=mu.hat.i, color=N, size=N)) +
-  xlab(TeX("Observed Mean $\\hat{\\mu}^{(MLE)}_{is}$")) +
-  ylab(TeX("Empirical Bayes estimate $\\hat{\\mu}^{(EB)}_{is}$")) +
+  xlab(TeX("Observed Mean $\\hat{\\mu}^{(MLE)}_{i}$")) +
+  ylab(TeX("Empirical Bayes estimate $\\hat{\\mu}^{(EB)}_{i}$")) +
+  geom_hline(yintercept=mu.hat.overall,linetype="dashed",color="gray60",linewidth=1) +
   geom_abline(intercept=0, slope=1, linewidth=1, linetype="dashed", color="gray60") +
   geom_abline(intercept=0, slope=0, linewidth=0.5, linetype="solid", color="gray70") +
   geom_point(alpha=0.6) +
-  labs(title = paste0("Visualizing Shrinkage in Estimating kicker Skills"))
-plot_EB_shrinkage
-ggsave(paste0("results_fg_plot_EB_shrinkage.png"), plot_EB_shrinkage, width=10, height=4)
+  labs(title = paste0("Visualizing Shrinkage in Estimating Kicker Skills"))
+# plot_EB_shrinkage
+ggsave(paste0("results_fg_plot_EB_shrinkage.png"), plot_EB_shrinkage, width=7, height=5)
 
 ### plot Benjamini Hochberg
-max_rank = (df_pvals_BH.full %>% group_by(stroke_category) %>% filter(pval <= max(alphas)) %>% reframe(m=max(rank)) %>% reframe(m=max(m)))$m
-max_rank
-max_p = (df_pvals_BH.full %>% filter(rank <= max_rank) %>% reframe(p=max(bh_threshold)) )$p
-max_p
-plot_BH0 = 
-  df_pvals_BH.full %>%
-  ggplot(aes(x = rank)) +
-  facet_wrap(~ stroke_category) + 
-  geom_point(aes(y = pval), color = "black", size = 0.5, shape=21) +
-  geom_line(aes(y = bh_threshold, color=factor(alpha)), linewidth = 0.5) +
-  labs(
-    title = paste0("Benjamini-Hochberg FDR Control"),
-    x = "P-value Rank",
-    y = "P-value",
-  ) +
-  # ylim(c(0, max(alphas))) +
-  ylim(c(0, max_p)) +
-  xlim(c(0,max_rank)) +
-  theme(panel.spacing = unit(2, "lines")) +
-  scale_color_manual(name = "\U1D6FC", values=brewer.pal(9, "PuRd")[4:8])
-# plot_BH0
-ggsave(paste0("results_fg_plot_BH0.png"), plot_BH0, width=9, height=3)
-
-### plot Benjamini Hochberg
-max_ranks = df_pvals_BH.full %>% filter(alpha == max(alphas), rank > 25) %>% group_by(stroke_category) %>% mutate(diff = abs(pval - bh_threshold)) %>% arrange(diff) %>% slice_head() %>% ungroup() %>% select(stroke_category, rank) %>% rename(max_rank = rank)
-max_ranks$max_rank = max_ranks$max_rank + 5
-max_ranks
-max_p = (df_pvals_BH.full %>% filter(rank <= max_rank) %>% reframe(p=max(bh_threshold)) )$p
-max_p
 plot_BH = 
   df_pvals_BH.full %>%
-  left_join(max_ranks) %>%
-  filter(pval <= max(alphas), rank <= max_rank ) %>%
   ggplot(aes(x = rank)) +
-  facet_wrap(~ stroke_category, scales="free_x") + 
   geom_point(aes(y = pval), color = "black", size = 0.5, shape=21) +
   geom_line(aes(y = bh_threshold, color=factor(alpha)), linewidth = 0.5) +
   labs(
@@ -304,34 +279,26 @@ plot_BH =
     x = "P-value Rank",
     y = "P-value",
   ) +
-  # ylim(c(0, max(alphas))) +
-  ylim(c(0, max_p)) +
   theme(panel.spacing = unit(2, "lines")) +
   scale_color_manual(name = "\U1D6FC", values=brewer.pal(9, "PuRd")[4:8])
 # plot_BH
-ggsave(paste0("results_fg_plot_BH.png"), plot_BH, width=9, height=3)
+ggsave(paste0("results_fg_plot_BH.png"), plot_BH, width=6, height=3)
 
-################
-### Plotting ###
-################
 
 ### Top N kickers
 top_N = 10
 df_topkickers = 
   df.EB.results.full %>%
-  arrange(stroke_category, -mu.hat.i) %>%
-  group_by(stroke_category) %>%
+  arrange(-mu.hat.i) %>%
   slice_head(n = top_N) %>%
-  select(stroke_category, Player, mu.hat.i, mu.hat.MLE.i, N) %>%
-  rename(Stroke = stroke_category, mu_hat_EB = mu.hat.i, mu_hat_MLE = mu.hat.MLE.i)
+  select(Player, mu.hat.i, mu.hat.MLE.i, N) %>%
+  rename(mu_hat_EB = mu.hat.i, mu_hat_MLE = mu.hat.MLE.i)
 df_topkickers
 
 gt_topkickers = 
   gt(df_topkickers) %>%
   fmt_number("mu_hat_EB", decimals=3) %>%
   fmt_number("mu_hat_MLE", decimals=3) %>%
-  # cols_label(mu_hat = "\U00B5") %>%
-  # cols_label(mu_hat_EB = html("Estimated \U00B5 via <br> Empirical Bayes")) %>%
   cols_label(mu_hat_EB = html("Empirical Bayes <br> Estimate")) %>%
   cols_label(mu_hat_MLE = html("Observed Mean <br> (MLE)")) %>%
   tab_options(row_group.as_column = TRUE)  %>%
@@ -345,10 +312,7 @@ gtsave(gt_topkickers, "results_fg_plot_topkickers.png")
 ### Num significant kickers table
 df_nSigkickers = 
   df_nsig.full %>%
-  relocate(stroke_category, .before = alpha) %>%
-  rename(Stroke = stroke_category) %>%
-  mutate(x = (1-alpha)*nsig) %>%
-  group_by(Stroke)
+  mutate(x = (1-alpha)*nsig) 
 df_nSigkickers
 
 gt_nSigkickers = 
@@ -362,9 +326,6 @@ gt_nSigkickers =
   ) 
 # gt_nSigkickers
 gtsave(gt_nSigkickers, paste0("results_fg_plot_BH_nSig.png"))
-
-
-#
-
+ 
 
 
