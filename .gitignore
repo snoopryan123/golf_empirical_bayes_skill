@@ -10,3 +10,5 @@ analysis\ for\ 2015\ only/
 *.png
 *.jpg
 *.jpeg
+
+!fg_model_b1.rds
