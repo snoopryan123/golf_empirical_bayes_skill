@@ -145,7 +145,7 @@ fit_params.EB.mle <- function(epsilon=1e-4, df0) {
 }
 
 ################
-### 
+### Run the EB/BH procedure
 ################
 
 table(df_fg_1$season)
@@ -376,7 +376,6 @@ gt_nSigkickers =
   ) 
 # gt_nSigkickers
 gtsave(gt_nSigkickers, paste0("results_fg_C",CHUNK_SIZE,"_plot_BH_nSig.png"))
-
 
 ################
 
